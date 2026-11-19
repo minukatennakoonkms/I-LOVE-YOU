@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>A Galaxy of Love for You</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+
+    /* Fullscreen 3D Canvas */
+    #galaxy-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    /* Intro Overlay */
+    #intro-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: radial-gradient(circle at 50% 45%, rgba(42, 8, 36, 0.45) 0%, rgba(0, 0, 0, 0.94) 70%, #000000 100%);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+
+    #intro-screen.fade-out {
+      opacity: 0;
+      transform: scale(1.08);
+      pointer-events: none;
+    }
+
+    .intro-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2.1rem, 6vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: #ffffff;
+      text-shadow:
+        0 0 18px rgba(255, 110, 199, 0.55),
+        0 0 42px rgba(255, 45, 138, 0.35);
+      margin-bottom: 24px;
+      letter-spacing: 0.01em;
+    }
+
+    .intro-mascot {
+      width: clamp(132px, 34vw, 176px);
+      height: clamp(132px, 34vw, 176px);
+      margin-bottom: 22px;
+      animation: floatGentle 3.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 22px rgba(255, 64, 140, 0.35));
+    }
+
+    @keyframes floatGentle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-9px); }
+    }
+
+    .intro-subtitle {
+      font-size: clamp(0.75rem, 2.2vw, 0.95rem);
+      font-weight: 500;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: rgba(255, 224, 240, 0.88);
+      margin-bottom: 26px;
+      text-shadow: 0 0 12px rgba(255, 105, 180, 0.5);
+    }
+
+    .enter-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 34px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 150, 205, 0.65);
+      background: linear-gradient(135deg, #ff3385 0%, #c81d77 100%);
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(0.74rem, 2vw, 0.86rem);
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow:
+        0 0 22px rgba(255, 46, 136, 0.6),
+        0 0 48px rgba(255, 46, 136, 0.28),
+        inset 0 1px 1px rgba(255, 255, 255, 0.35);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+      animation: btnPulse 2.4s ease-in-out infinite;
+    }
+
+    .enter-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow:
+        0 0 30px rgba(255, 55, 145, 0.85),
+        0 0 64px rgba(255, 46, 136, 0.45),
+        inset 0 1px 2px rgba(255, 255, 255, 0.45);
+      filter: brightness(1.08);
+    }
+
+    .enter-btn:active {
+      transform: scale(0.97);
+    }
+
+    @keyframes btnPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 20px rgba(255, 46, 136, 0.58),
+          0 0 44px rgba(255, 46, 136, 0.26);
+      }
+      50% {
+        box-shadow:
+          0 0 32px rgba(255, 70, 160, 0.82),
+          0 0 64px rgba(255, 46, 136, 0.42);
+      }
+    }
+
+    /* Subtle Hint Pill (fades after interaction) */
+    #galaxy-hint {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      padding: 7px 16px;
+      border-radius: 9999px;
+      background: rgba(18, 8, 26, 0.55);
+      border: 1px solid rgba(255, 105, 180, 0.28);
+      backdrop-filter: blur(8px);
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      color: rgba(255, 224, 242, 0.85);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      white-space: nowrap;
+    }
+
+    #galaxy-hint.visible {
+      opacity: 1;
+    }
+
+    /* Bottom-Center Floating Heart / Audio Toggle (matches video UI) */
+    #audio-toggle {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      z-index: 15;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 160, 210, 0.45);
+      background: rgba(255, 255, 255, 0.94);
+      color: #ff2a7a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255, 42, 122, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #audio-toggle.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) scale(1);
+    }
+
+    #audio-toggle:hover {
+      transform: translateX(-50%) scale(1.08);
+      box-shadow: 0 6px 26px rgba(255, 42, 122, 0.7);
+    }
+
+    #audio-toggle.muted {
+      background: rgba(34, 18, 42, 0.82);
+      color: rgba(255, 175, 210, 0.6);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    #audio-toggle.playing svg {
+      animation: heartBeat 1.4s ease-in-out infinite;
+    }
+
+    @keyframes heartBeat {
+      0%, 100% { transform: scale(1); }
+      18% { transform: scale(1.18); }
+      34% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+      68% { transform: scale(1); }
+    }
+
+    /* Memory Modal */
+    #memory-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(4, 2, 10, 0.66);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    #memory-modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 390px;
+      border-radius: 24px;
+      padding: 20px 22px 24px;
+      background: linear-gradient(180deg, rgba(28, 12, 34, 0.92) 0%, rgba(12, 6, 18, 0.95) 100%);
+      border: 1px solid rgba(255, 105, 180, 0.45);
+      box-shadow:
+        0 0 36px rgba(255, 42, 128, 0.32),
+        0 20px 60px rgba(0, 0, 0, 0.75);
+      text-align: center;
+      transform: translateY(18px) scale(0.95);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #memory-modal.open .modal-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-top-heart {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255, 65, 145, 0.16);
+      border: 1px solid rgba(255, 120, 185, 0.4);
+      margin-bottom: 14px;
+      color: #ff66a8;
+      font-size: 0.85rem;
+    }
+
+    .modal-art-wrap {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #07030c;
+      border: 1px solid rgba(255, 130, 195, 0.22);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-art-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .modal-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      text-shadow: 0 0 14px rgba(255, 105, 180, 0.45);
+    }
+
+    .modal-message {
+      font-size: 0.93rem;
+      line-height: 1.6;
+      color: rgba(255, 232, 245, 0.88);
+      margin-bottom: 22px;
+      padding: 0 6px;
+    }
+
+    .modal-close-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 26px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 120, 185, 0.55);
+      background: rgba(255, 46, 136, 0.18);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 46, 136, 0.36);
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(255, 46, 136, 0.45);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="galaxy-canvas"></canvas>
+
+  <!-- Landing / Intro Screen -->
+  <div id="intro-screen">
+    <h1 class="intro-title">A Galaxy of<br />Love for You</h1>
+
+    <!-- Cute Kawaii Puppy Hugging a Glowing Red Heart -->
+    <div class="intro-mascot" aria-hidden="true">
+      <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="heartGlowIntro" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ff7aa8" />
+            <stop offset="45%" stop-color="#ff255c" />
+            <stop offset="100%" stop-color="#b80b3b" />
+          </radialGradient>
+          <filter id="softGlowIntro" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <!-- Subtle stardust sparkles -->
+        <circle cx="34" cy="48" r="2.2" fill="#ff9ed2" opacity="0.85" />
+        <circle cx="186" cy="42" r="2.5" fill="#ffffff" opacity="0.9" />
+        <circle cx="192" cy="148" r="2" fill="#ff66b2" opacity="0.8" />
+        <circle cx="28" cy="162" r="1.8" fill="#ffd1e8" opacity="0.75" />
+
+        <!-- Floppy Ears -->
+        <ellipse cx="78" cy="78" rx="15" ry="26" transform="rotate(24 78 78)" fill="#1a1420" stroke="#ffffff" stroke-width="2.5" />
+        <ellipse cx="148" cy="80" rx="15" ry="26" transform="rotate(-22 148 80)" fill="#1a1420" stroke="#ffffff" stroke-width="2.5" />
+
+        <!-- Puppy Body -->
+        <ellipse cx="122" cy="156" rx="34" ry="34" fill="#ffffff" stroke="#24192b" stroke-width="3" />
+        <!-- Tail -->
+        <path d="M153 162 Q170 156 167 142 Q161 146 155 152 Z" fill="#ffffff" stroke="#24192b" stroke-width="2.8" stroke-linejoin="round" />
+
+        <!-- Puppy Head -->
+        <ellipse cx="114" cy="86" rx="41" ry="34" fill="#ffffff" stroke="#24192b" stroke-width="3" />
+        <!-- Eyes -->
+        <circle cx="99" cy="85" r="4.2" fill="#1a1220" />
+        <circle cx="127" cy="85" r="4.2" fill="#1a1220" />
+        <circle cx="97.8" cy="83.6" r="1.3" fill="#ffffff" />
+        <circle cx="125.8" cy="83.6" r="1.3" fill="#ffffff" />
+        <!-- Blush -->
+        <ellipse cx="89" cy="94" rx="6" ry="3.4" fill="#ff9bc2" opacity="0.65" />
+        <ellipse cx="137" cy="94" rx="6" ry="3.4" fill="#ff9bc2" opacity="0.65" />
+        <!-- Nose & Smile -->
+        <ellipse cx="113" cy="92" rx="4.8" ry="3.4" fill="#1a1220" />
+        <path d="M107 98 Q113 103 119 98" fill="none" stroke="#1a1220" stroke-width="2.4" stroke-linecap="round" />
+
+        <!-- Big Glowing Red Heart -->
+        <path d="M98 186 C98 186 44 152 44 119 C44 100 59 88 75 88 C86 88 94 94 98 102 C102 94 110 88 121 88 C137 88 152 100 152 119 C152 152 98 186 98 186 Z"
+              fill="url(#heartGlowIntro)" stroke="#ffffff" stroke-width="2.2" filter="url(#softGlowIntro)" />
+        <!-- Heart Gloss Highlight -->
+        <path d="M62 106 C56 112 56 122 61 128" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round" />
+
+        <!-- Hugging Paws -->
+        <ellipse cx="78" cy="112" rx="13" ry="9" transform="rotate(-18 78 112)" fill="#ffffff" stroke="#24192b" stroke-width="2.8" />
+        <ellipse cx="128" cy="144" rx="15" ry="10" transform="rotate(14 128 144)" fill="#ffffff" stroke="#24192b" stroke-width="2.8" />
+        <!-- Feet -->
+        <ellipse cx="112" cy="186" rx="14" ry="9" fill="#ffffff" stroke="#24192b" stroke-width="2.8" />
+        <ellipse cx="140" cy="184" rx="13" ry="8.5" fill="#ffffff" stroke="#24192b" stroke-width="2.8" />
+      </svg>
+    </div>
+
+    <p class="intro-subtitle">Every Star Belongs to You, My Love</p>
+
+    <button id="enter-btn" class="enter-btn" type="button">
+      Enter Our Universe
+    </button>
+  </div>
+
+  <!-- Subtle Interactive Hint -->
+  <div id="galaxy-hint">Drag to explore • Tap the orbiting memories ✨</div>
+
+  <!-- Floating Bottom Heart / Audio Toggle -->
+  <button id="audio-toggle" type="button" aria-label="Toggle romantic music" title="Music">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+    </svg>
+  </button>
+
+  <!-- Romantic Memory Card Modal -->
+  <div id="memory-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-top-heart" aria-hidden="true">♥</div>
+      <div class="modal-art-wrap" id="modal-art"></div>
+      <h2 class="modal-title" id="modal-title"></h2>
+      <p class="modal-message" id="modal-message"></p>
+      <button id="modal-close-btn" class="modal-close-btn" type="button">
+        Back ❤️
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ==========================================================
+      // 1. ROMANTIC MEMORIES DATA & INLINE SVG ARTWORK
+      // ==========================================================
+      const MEMORIES = [
+        {
+          id: 'amor',
+          title: 'Love of My Life',
+          message: 'Every single day we spend together, I somehow fall in love with you even more than the day before.',
+          angle: 0.4,
+          radius: 10.5,
+          yOffset: 0.85,
+          iconColor: '#ff4b8b',
+          svg: `
+            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="bg1" cx="50%" cy="50%" r="65%">
+                  <stop offset="0%" stop-color="#2a0d26" />
+                  <stop offset="100%" stop-color="#050208" />
+                </radialGradient>
+                <radialGradient id="h1" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%" stop-color="#ff85b3" />
+                  <stop offset="50%" stop-color="#ff1f5a" />
+                  <stop offset="100%" stop-color="#9e0832" />
+                </radialGradient>
+              </defs>
+              <rect width="400" height="300" fill="url(#bg1)" />
+              <!-- Stars -->
+              <circle cx="52" cy="48" r="2" fill="#fff" opacity="0.8" />
+              <circle cx="110" cy="36" r="1.6" fill="#ff9ed2" opacity="0.7" />
+              <circle cx="322" cy="52" r="2.2" fill="#fff" opacity="0.85" />
+              <circle cx="355" cy="118" r="1.8" fill="#ff85c0" opacity="0.8" />
+              <circle cx="64" cy="230" r="1.8" fill="#ffd6eb" opacity="0.7" />
+              <circle cx="330" cy="245" r="2" fill="#fff" opacity="0.75" />
+              <!-- Silver thread from top -->
+              <line x1="142" y1="0" x2="142" y2="115" stroke="#d8d4e8" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.8" />
+              <!-- Playful upside-down red hero chibi -->
+              <g transform="translate(142, 152)">
+                <!-- Body upside down -->
+                <ellipse cx="0" cy="-22" rx="18" ry="22" fill="#d91e36" stroke="#190812" stroke-width="2.5" />
+                <path d="M-12 -38 L-24 -52 M12 -38 L24 -52" stroke="#1e40af" stroke-width="7" stroke-linecap="round" />
+                <!-- Head upside down -->
+                <circle cx="0" cy="14" r="24" fill="#e11d48" stroke="#190812" stroke-width="2.5" />
+                <!-- Cute white eyes -->
+                <path d="M-14 10 Q-8 22 -3 14 Z" fill="#ffffff" stroke="#190812" stroke-width="2" />
+                <path d="M14 10 Q8 22 3 14 Z" fill="#ffffff" stroke="#190812" stroke-width="2" />
+                <!-- Arm reaching with tiny heart -->
+                <path d="M16 -8 Q34 2 44 10" fill="none" stroke="#e11d48" stroke-width="7" stroke-linecap="round" />
+              </g>
+              <!-- Glowing Heart between them -->
+              <path d="M202 184 C202 184 174 166 174 148 C174 138 182 132 190 132 C196 132 200 136 202 140 C204 136 208 132 214 132 C222 132 230 138 230 148 C230 166 202 184 202 184 Z"
+                    fill="url(#h1)" stroke="#ffd6e8" stroke-width="1.8" />
+              <!-- Cute White Kitten with Pink Bow -->
+              <g transform="translate(268, 178)">
+                <!-- Body -->
+                <ellipse cx="0" cy="36" rx="26" ry="28" fill="#ff5ca8" stroke="#220c1a" stroke-width="2.5" />
+                <!-- Ears -->
+                <polygon points="-24,-14 -30,-42 -4,-26" fill="#ffffff" stroke="#220c1a" stroke-width="2.5" stroke-linejoin="round" />
+                <polygon points="24,-14 30,-42 4,-26" fill="#ffffff" stroke="#220c1a" stroke-width="2.5" stroke-linejoin="round" />
+                <!-- Head -->
+                <ellipse cx="0" cy="-6" rx="33" ry="26" fill="#ffffff" stroke="#220c1a" stroke-width="2.5" />
+                <!-- Pink Bow -->
+                <g transform="translate(18, -28) rotate(16)">
+                  <ellipse cx="-9" cy="0" rx="8" ry="6" fill="#ff2e88" stroke="#220c1a" stroke-width="2" />
+                  <ellipse cx="9" cy="0" rx="8" ry="6" fill="#ff2e88" stroke="#220c1a" stroke-width="2" />
+                  <circle cx="0" cy="0" r="4" fill="#ff85be" stroke="#220c1a" stroke-width="1.8" />
+                </g>
+                <!-- Face -->
+                <circle cx="-12" cy="-5" r="3.2" fill="#1a1020" />
+                <circle cx="12" cy="-5" r="3.2" fill="#1a1020" />
+                <ellipse cx="0" cy="1" rx="4" ry="2.6" fill="#ffd166" />
+                <ellipse cx="-20" cy="3" rx="5" ry="3" fill="#ff9bc2" opacity="0.65" />
+                <ellipse cx="20" cy="3" rx="5" ry="3" fill="#ff9bc2" opacity="0.65" />
+                <!-- Whiskers -->
+                <line x1="-38" y1="-8" x2="-24" y2="-6" stroke="#220c1a" stroke-width="1.8" />
+                <line x1="-38" y1="0" x2="-24" y2="0" stroke="#220c1a" stroke-width="1.8" />
+                <line x1="24" y1="-6" x2="38" y2="-8" stroke="#220c1a" stroke-width="1.8" />
+                <line x1="24" y1="0" x2="38" y2="0" stroke="#220c1a" stroke-width="1.8" />
+              </g>
+            </svg>`
+        },
+        {
+          id: 'parati',
+          title: 'For You',
+          message: 'For you, who makes my heart beat in a way no one else ever could. In every quiet moment and every heartbeat, it is always you.',
+          angle: 2.0,
+          radius: 12.2,
+          yOffset: 0.6,
+          iconColor: '#ff7ec4',
+          svg: `
+            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="bg2" cx="50%" cy="48%" r="68%">
+                  <stop offset="0%" stop-color="#2c1032" />
+                  <stop offset="100%" stop-color="#05030b" />
+                </radialGradient>
+                <radialGradient id="bub" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%" stop-color="#ffe6f2" />
+                  <stop offset="55%" stop-color="#ff8ec4" />
+                  <stop offset="100%" stop-color="#ff3d94" />
+                </radialGradient>
+              </defs>
+              <rect width="400" height="300" fill="url(#bg2)" />
+              <!-- Twinkling Stars -->
+              <circle cx="58" cy="60" r="2" fill="#fff" opacity="0.85" />
+              <circle cx="340" cy="54" r="2.2" fill="#ffd1ea" opacity="0.9" />
+              <circle cx="88" cy="180" r="1.8" fill="#ff7ec4" opacity="0.8" />
+              <circle cx="322" cy="196" r="1.8" fill="#fff" opacity="0.7" />
+              <circle cx="200" cy="24" r="1.6" fill="#ff9ed2" opacity="0.8" />
+
+              <!-- Three Glowing Pink Heart Bubbles -->
+              <g transform="translate(200, 74)">
+                <circle cx="0" cy="0" r="30" fill="url(#bub)" opacity="0.95" />
+                <polygon points="-6,28 6,28 0,38" fill="#ff5ca8" />
+                <path d="M0 13 C0 13 -14 3 -14 -5 C-14 -11 -9 -15 -4 -15 C-1 -15 0 -12 0 -10 C0 -12 1 -15 4 -15 C9 -15 14 -11 14 -5 C14 3 0 13 0 13 Z" fill="#ff1e75" />
+              </g>
+              <g transform="translate(124, 118)">
+                <circle cx="0" cy="0" r="25" fill="url(#bub)" opacity="0.92" />
+                <polygon points="-4,23 7,21 2,31" fill="#ff5ca8" />
+                <path d="M0 10 C0 10 -11 2 -11 -4 C-11 -9 -7 -12 -3 -12 C-1 -12 0 -10 0 -8 C0 -10 1 -12 3 -12 C7 -12 11 -9 11 -4 C11 2 0 10 0 10 Z" fill="#ff1e75" />
+              </g>
+              <g transform="translate(276, 118)">
+                <circle cx="0" cy="0" r="25" fill="url(#bub)" opacity="0.92" />
+                <polygon points="-7,21 4,23 -2,31" fill="#ff5ca8" />
+                <path d="M0 10 C0 10 -11 2 -11 -4 C-11 -9 -7 -12 -3 -12 C-1 -12 0 -10 0 -8 C0 -10 1 -12 3 -12 C7 -12 11 -9 11 -4 C11 2 0 10 0 10 Z" fill="#ff1e75" />
+              </g>
+
+              <!-- Cute Sitting White Puppy Looking Up -->
+              <g transform="translate(200, 214)">
+                <ellipse cx="0" cy="54" rx="44" ry="8" fill="rgba(0,0,0,0.45)" />
+                <!-- Body -->
+                <ellipse cx="0" cy="24" rx="34" ry="30" fill="#ffffff" stroke="#20142a" stroke-width="2.8" />
+                <!-- Ears -->
+                <ellipse cx="-32" cy="-22" rx="11" ry="18" transform="rotate(25 -32 -22)" fill="#f3e8ff" stroke="#20142a" stroke-width="2.5" />
+                <ellipse cx="32" cy="-22" rx="11" ry="18" transform="rotate(-25 32 -22)" fill="#f3e8ff" stroke="#20142a" stroke-width="2.5" />
+                <!-- Head -->
+                <ellipse cx="0" cy="-16" rx="34" ry="28" fill="#ffffff" stroke="#20142a" stroke-width="2.8" />
+                <!-- Happy Eyes & Smile -->
+                <circle cx="-12" cy="-18" r="3.8" fill="#1a1020" />
+                <circle cx="12" cy="-18" r="3.8" fill="#1a1020" />
+                <circle cx="-13" cy="-19.5" r="1.2" fill="#ffffff" />
+                <circle cx="11" cy="-19.5" r="1.2" fill="#ffffff" />
+                <ellipse cx="0" cy="-12" rx="4.2" ry="3" fill="#1a1020" />
+                <path d="M-7 -6 Q0 2 7 -6" fill="none" stroke="#1a1020" stroke-width="2.4" stroke-linecap="round" />
+                <ellipse cx="-21" cy="-9" rx="5.5" ry="3.2" fill="#ff9bc2" opacity="0.65" />
+                <ellipse cx="21" cy="-9" rx="5.5" ry="3.2" fill="#ff9bc2" opacity="0.65" />
+                <!-- Paws -->
+                <ellipse cx="-14" cy="48" rx="10" ry="7" fill="#ffffff" stroke="#20142a" stroke-width="2.5" />
+                <ellipse cx="14" cy="48" rx="10" ry="7" fill="#ffffff" stroke="#20142a" stroke-width="2.5" />
+              </g>
+            </svg>`
+        },
+        {
+          id: 'parasiempre',
+          title: 'Forever',
+          message: 'No matter how many lifetimes I had to live, in every single one of them I would still choose you. Forever and a day more.',
+          angle: 3.6,
+          radius: 10.8,
+          yOffset: 1.0,
+          iconColor: '#ffb86c',
+          svg: `
+            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="goldAura" cx="50%" cy="54%" r="55%">
+                  <stop offset="0%" stop-color="#fff4cc" />
+                  <stop offset="32%" stop-color="#ffb347" stop-opacity="0.82" />
+                  <stop offset="68%" stop-color="#b5446e" stop-opacity="0.32" />
+                  <stop offset="100%" stop-color="#07040d" />
+                </radialGradient>
+                <linearGradient id="silL" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#1a0d16" />
+                  <stop offset="100%" stop-color="#4d2432" />
+                </linearGradient>
+              </defs>
+              <rect width="400" height="300" fill="#07040d" />
+              <rect width="400" height="300" fill="url(#goldAura)" />
+              <!-- Stardust swirl -->
+              <path d="M55 190 Q120 70 200 155 T345 110" fill="none" stroke="#ffd89b" stroke-width="1.5" stroke-dasharray="2 7" opacity="0.7" />
+              <circle cx="84" cy="72" r="2" fill="#ffe6b3" />
+              <circle cx="318" cy="68" r="2.2" fill="#ffe6b3" />
+              <circle cx="336" cy="212" r="1.8" fill="#ffb3d9" />
+              <circle cx="72" cy="224" r="1.8" fill="#ffb3d9" />
+
+              <!-- Left Silhouette -->
+              <path d="M88 300 C94 240 108 195 130 165 C118 145 118 102 140 84 C162 66 186 80 190 106 C193 124 198 134 194 146 C188 158 182 162 182 174 C182 192 178 232 176 300 Z"
+                    fill="url(#silL)" stroke="#ffcb77" stroke-width="1.8" />
+              <!-- Right Silhouette -->
+              <path d="M312 300 C306 240 292 195 270 165 C282 145 282 102 260 84 C238 66 214 80 210 106 C207 124 202 134 206 146 C212 158 218 162 218 174 C218 192 222 232 224 300 Z"
+                    fill="url(#silL)" stroke="#ffcb77" stroke-width="1.8" />
+
+              <!-- Radiant Golden Heart Formed Between Them -->
+              <path d="M200 206 C200 206 164 182 164 159 C164 146 174 137 185 137 C193 137 198 142 200 148 C202 142 207 137 215 137 C226 137 236 146 236 159 C236 182 200 206 200 206 Z"
+                    fill="#fff7d6" stroke="#ffae42" stroke-width="3" />
+              <circle cx="200" cy="164" r="46" fill="#ffd27d" opacity="0.22" />
+            </svg>`
+        },
+        {
+          id: 'cumple',
+          title: 'My Entire Universe',
+          message: 'You don’t need a special occasion to be reminded how deeply you are loved. You are my favorite place, my calmest peace, and my entire universe.',
+          angle: 5.15,
+          radius: 12.6,
+          yOffset: 0.75,
+          iconColor: '#ff3377',
+          svg: `
+            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="bg4" cx="50%" cy="50%" r="65%">
+                  <stop offset="0%" stop-color="#300c28" />
+                  <stop offset="100%" stop-color="#050208" />
+                </radialGradient>
+                <radialGradient id="h4" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%" stop-color="#ff8fb8" />
+                  <stop offset="48%" stop-color="#ff2260" />
+                  <stop offset="100%" stop-color="#a80838" />
+                </radialGradient>
+              </defs>
+              <rect width="400" height="300" fill="url(#bg4)" />
+              <circle cx="72" cy="56" r="2.2" fill="#fff" opacity="0.85" />
+              <circle cx="332" cy="64" r="2.2" fill="#ff9ed2" opacity="0.9" />
+              <circle cx="96" cy="236" r="1.8" fill="#ffd1e8" opacity="0.8" />
+              <circle cx="312" cy="226" r="2" fill="#fff" opacity="0.8" />
+              <!-- Glowing Heart + Sparkles -->
+              <g transform="translate(200, 152)">
+                <circle cx="0" cy="0" r="88" fill="#ff2e88" opacity="0.14" />
+                <path d="M0 78 C0 78 -78 28 -78 -18 C-78 -48 -54 -68 -28 -68 C-11 -68 0 -58 0 -46 C0 -58 11 -68 28 -68 C54 -68 78 -48 78 -18 C78 28 0 78 0 78 Z"
+                      fill="url(#h4)" stroke="#ffe0ef" stroke-width="2.5" />
+                <path d="M-50 -36 C-58 -24 -58 -8 -50 2" fill="none" stroke="rgba(255,255,255,0.58)" stroke-width="6" stroke-linecap="round" />
+                <!-- Crown / Star Sparkle -->
+                <path d="M0 -106 L5 -91 L20 -86 L5 -81 L0 -66 L-5 -81 L-20 -86 L-5 -91 Z" fill="#fff3b0" />
+              </g>
+            </svg>`
+        }
+      ];
+
+      const PHRASES = [
+        'YOU ARE MY HOME',
+        'YOU ARE MAGIC',
+        'MY ETERNAL LOVE',
+        'I ADORE YOU',
+        'MY EVERYTHING',
+        'LOVE OF MY LIFE',
+        'MY SOULMATE',
+        'I CHOOSE YOU',
+        'ALWAYS TOGETHER',
+        'WITH ALL MY LOVE',
+        'FOR YOU',
+        'FOREVER & ALWAYS',
+        'MY HEART IS YOURS',
+        'YOU ARE MY UNIVERSE',
+        'EVERY MOMENT WITH YOU',
+        'I LOVE YOU ENDLESSLY',
+        'MY SHINING STAR',
+        'ALWAYS WITH YOU'
+      ];
+
+      // ==========================================================
+      // 2. WEB AUDIO ROMANTIC AMBIENT SYNTH (USER-GESTURE SAFE)
+      // ==========================================================
+      let audioCtx = null;
+      let masterGain = null;
+      let isMusicPlaying = false;
+      let chordInterval = null;
+
+      function startRomanticMusic() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          if (!audioCtx) {
+            audioCtx = new AudioContextClass();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            masterGain.connect(audioCtx.destination);
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+          masterGain.gain.linearRampToValueAtTime(0.16, audioCtx.currentTime + 1.8);
+          isMusicPlaying = true;
+          updateAudioButton();
+
+          if (!chordInterval) {
+            const chords = [
+              [261.63, 329.63, 392.00, 493.88], // Cmaj7
+              [220.00, 261.63, 329.63, 392.00], // Am7
+              [174.61, 220.00, 261.63, 329.63], // Fmaj7
+              [196.00, 246.94, 293.66, 392.00]  // G6
+            ];
+            let step = 0;
+
+            const playChord = () => {
+              if (!audioCtx || !isMusicPlaying) return;
+              const now = audioCtx.currentTime;
+              const notes = chords[step % chords.length];
+              step++;
+
+              notes.forEach((freq, idx) => {
+                // Warm pad
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq * 0.5, now);
+                g.gain.setValueAtTime(0.0001, now);
+                g.gain.linearRampToValueAtTime(0.11, now + 0.8);
+                g.gain.exponentialRampToValueAtTime(0.0008, now + 3.6);
+                osc.connect(g);
+                g.connect(masterGain);
+                osc.start(now);
+                osc.stop(now + 3.7);
+
+                // Soft music-box chime arpeggio
+                const chime = audioCtx.createOscillator();
+                const cg = audioCtx.createGain();
+                const startT = now + idx * 0.42;
+                chime.type = 'triangle';
+                chime.frequency.setValueAtTime(freq * 2, startT);
+                cg.gain.setValueAtTime(0.0001, startT);
+                cg.gain.linearRampToValueAtTime(0.06, startT + 0.05);
+                cg.gain.exponentialRampToValueAtTime(0.0005, startT + 1.6);
+                chime.connect(cg);
+                cg.connect(masterGain);
+                chime.start(startT);
+                chime.stop(startT + 1.65);
+              });
+            };
+
+            playChord();
+            chordInterval = setInterval(playChord, 3400);
+          }
+        } catch (err) {
+          // Ignore audio errors on restricted devices
+        }
+      }
+
+      function toggleMusic() {
+        if (!audioCtx) {
+          startRomanticMusic();
+          return;
+        }
+        if (isMusicPlaying) {
+          isMusicPlaying = false;
+          if (masterGain && audioCtx) {
+            masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+          }
+        } else {
+          startRomanticMusic();
+        }
+        updateAudioButton();
+      }
+
+      const audioToggleBtn = document.getElementById('audio-toggle');
+      function updateAudioButton() {
+        if (isMusicPlaying) {
+          audioToggleBtn.classList.add('playing');
+          audioToggleBtn.classList.remove('muted');
+        } else {
+          audioToggleBtn.classList.remove('playing');
+          audioToggleBtn.classList.add('muted');
+        }
+      }
+      audioToggleBtn.addEventListener('click', toggleMusic);
+
+      // ==========================================================
+      // 3. THREE.JS SCENE SETUP
+      // ==========================================================
+      const canvas = document.getElementById('galaxy-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 1);
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x030008, 0.0065);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 450);
+
+      // Helper: Radial glow circle texture for stars/particles
+      function createGlowTexture(innerColor, midColor) {
+        const size = 64;
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+        const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        grad.addColorStop(0, innerColor || 'rgba(255,255,255,1)');
+        grad.addColorStop(0.28, midColor || 'rgba(255,110,190,0.85)');
+        grad.addColorStop(0.65, 'rgba(255,30,130,0.22)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        return tex;
+      }
+
+      const starTex = createGlowTexture('rgba(255,255,255,1)', 'rgba(255,150,215,0.85)');
+      const heartParticleTex = createGlowTexture('rgba(255,245,252,1)', 'rgba(255,70,155,0.92)');
+
+      // ==========================================================
+      // 4. DEEP SPACE STARFIELD + WARP TUNNEL PARTICLES
+      // ==========================================================
+      const bgStarCount = 2400;
+      const bgStarPos = new Float32Array(bgStarCount * 3);
+      const bgStarCol = new Float32Array(bgStarCount * 3);
+      for (let i = 0; i < bgStarCount; i++) {
+        const r = 45 + Math.random() * 140;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        bgStarPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        bgStarPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        bgStarPos[i * 3 + 2] = r * Math.cos(phi);
+
+        const c = new THREE.Color();
+        const roll = Math.random();
+        if (roll < 0.55) c.setHex(0xffffff);
+        else if (roll < 0.85) c.setHex(0xff85c8);
+        else c.setHex(0xc084fc);
+        bgStarCol[i * 3] = c.r;
+        bgStarCol[i * 3 + 1] = c.g;
+        bgStarCol[i * 3 + 2] = c.b;
+      }
+      const bgStarGeo = new THREE.BufferGeometry();
+      bgStarGeo.setAttribute('position', new THREE.BufferAttribute(bgStarPos, 3));
+      bgStarGeo.setAttribute('color', new THREE.BufferAttribute(bgStarCol, 3));
+      const bgStarMat = new THREE.PointsMaterial({
+        size: 0.7,
+        map: starTex,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const bgStars = new THREE.Points(bgStarGeo, bgStarMat);
+      scene.add(bgStars);
+
+      // Warp Tunnel (visible during transition 00:01)
+      const warpCount = 1400;
+      const warpPositions = new Float32Array(warpCount * 3);
+      const warpColors = new Float32Array(warpCount * 3);
+      for (let i = 0; i < warpCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 1.6 + Math.random() * 16;
+        warpPositions[i * 3] = Math.cos(angle) * radius;
+        warpPositions[i * 3 + 1] = Math.sin(angle) * radius;
+        warpPositions[i * 3 + 2] = (Math.random() - 0.5) * 140;
+
+        const c = new THREE.Color(Math.random() > 0.35 ? 0xff4fa3 : 0xffffff);
+        warpColors[i * 3] = c.r;
+        warpColors[i * 3 + 1] = c.g;
+        warpColors[i * 3 + 2] = c.b;
+      }
+      const warpGeo = new THREE.BufferGeometry();
+      warpGeo.setAttribute('position', new THREE.BufferAttribute(warpPositions, 3));
+      warpGeo.setAttribute('color', new THREE.BufferAttribute(warpColors, 3));
+      const warpMat = new THREE.PointsMaterial({
+        size: 0.9,
+        map: starTex,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const warpTunnel = new THREE.Points(warpGeo, warpMat);
+      scene.add(warpTunnel);
+
+      // ==========================================================
+      // 5. MAIN GALAXY GROUP (BLACK HOLE + SPIRAL ARMS + 3D HEART)
+      // ==========================================================
+      const universeGroup = new THREE.Group();
+      universeGroup.scale.set(0.01, 0.01, 0.01);
+      universeGroup.visible = false;
+      scene.add(universeGroup);
+
+      // Black Hole Core
+      const bhCoreGeo = new THREE.SphereGeometry(1.55, 36, 36);
+      const bhCoreMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      const bhCore = new THREE.Mesh(bhCoreGeo, bhCoreMat);
+      universeGroup.add(bhCore);
+
+      // Photon Ring (bright glowing rim around black hole)
+      const ringGeo = new THREE.RingGeometry(1.58, 2.35, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xff8ad4,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const photonRing = new THREE.Mesh(ringGeo, ringMat);
+      photonRing.rotation.x = Math.PI / 2;
+      universeGroup.add(photonRing);
+
+      // Outer Soft Accretion Glow Sprite
+      const bhGlowMat = new THREE.SpriteMaterial({
+        map: createGlowTexture('rgba(255,235,248,0.95)', 'rgba(255,40,145,0.65)'),
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const bhGlow = new THREE.Sprite(bhGlowMat);
+      bhGlow.scale.set(11, 5.2, 1);
+      bhGlow.position.set(0, -0.1, 0);
+      universeGroup.add(bhGlow);
+
+      // Swirling Pink Spiral Galaxy Particles
+      const galaxyCount = 11000;
+      const gPos = new Float32Array(galaxyCount * 3);
+      const gCol = new Float32Array(galaxyCount * 3);
+      const arms = 5;
+      const maxRadius = 21;
+
+      const colorCore = new THREE.Color(0xffffff);
+      const colorInner = new THREE.Color(0xff4da6);
+      const colorMid = new THREE.Color(0xe61c88);
+      const colorOuter = new THREE.Color(0x9b1b7e);
+
+      for (let i = 0; i < galaxyCount; i++) {
+        const radius = 1.9 + Math.pow(Math.random(), 1.45) * (maxRadius - 1.9);
+        const armIndex = i % arms;
+        const branchAngle = (armIndex / arms) * Math.PI * 2;
+        const spinAngle = radius * 0.42;
+
+        const spread = 0.28 + radius * 0.095;
+        const randomX = (Math.random() - 0.5) * spread * 2.4;
+        const randomY = (Math.random() - 0.5) * (0.28 + (1 - radius / maxRadius) * 0.9);
+        const randomZ = (Math.random() - 0.5) * spread * 2.4;
+
+        gPos[i * 3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
+        gPos[i * 3 + 1] = randomY;
+        gPos[i * 3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+
+        const t = (radius - 1.9) / (maxRadius - 1.9);
+        const mixed = new THREE.Color();
+        if (t < 0.14) mixed.copy(colorCore).lerp(colorInner, t / 0.14);
+        else if (t < 0.55) mixed.copy(colorInner).lerp(colorMid, (t - 0.14) / 0.41);
+        else mixed.copy(colorMid).lerp(colorOuter, (t - 0.55) / 0.45);
+
+        if (Math.random() < 0.12) mixed.lerp(colorCore, 0.7);
+        gCol[i * 3] = mixed.r;
+        gCol[i * 3 + 1] = mixed.g;
+        gCol[i * 3 + 2] = mixed.b;
+      }
+
+      const galaxyGeo = new THREE.BufferGeometry();
+      galaxyGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3));
+      galaxyGeo.setAttribute('color', new THREE.BufferAttribute(gCol, 3));
+      const galaxyMat = new THREE.PointsMaterial({
+        size: 0.42,
+        map: starTex,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const galaxyPoints = new THREE.Points(galaxyGeo, galaxyMat);
+      universeGroup.add(galaxyPoints);
+
+      // ==========================================================
+      // 6. GIANT 3D GLOWING PARTICLE HEART ABOVE THE BLACK HOLE
+      // ==========================================================
+      const heartParticleCount = 3800;
+      const hPos = new Float32Array(heartParticleCount * 3);
+      const hCol = new Float32Array(heartParticleCount * 3);
+      const heartScale = 0.21;
+
+      for (let i = 0; i < heartParticleCount; i++) {
+        const t = Math.random() * Math.PI * 2;
+        // Concentrate particles near the outer heart outline for the crisp neon look in the video
+        const shell = Math.random() < 0.72 ? 0.88 + Math.random() * 0.15 : Math.pow(Math.random(), 0.45);
+        const x = 16 * Math.pow(Math.sin(t), 3) * shell;
+        const y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * shell;
+        const thickness = (1 - Math.abs(shell - 0.9) * 0.6) * 4.2;
+        const z = (Math.random() - 0.5) * thickness;
+
+        hPos[i * 3] = x * heartScale + (Math.random() - 0.5) * 0.16;
+        hPos[i * 3 + 1] = y * heartScale + (Math.random() - 0.5) * 0.16;
+        hPos[i * 3 + 2] = z * heartScale;
+
+        const c = new THREE.Color();
+        const r = Math.random();
+        if (r < 0.25) c.setHex(0xffffff);
+        else if (r < 0.68) c.setHex(0xff4da6);
+        else c.setHex(0xff147a);
+        hCol[i * 3] = c.r;
+        hCol[i * 3 + 1] = c.g;
+        hCol[i * 3 + 2] = c.b;
+      }
+
+      const bigHeartGeo = new THREE.BufferGeometry();
+      bigHeartGeo.setAttribute('position', new THREE.BufferAttribute(hPos, 3));
+      bigHeartGeo.setAttribute('color', new THREE.BufferAttribute(hCol, 3));
+      const bigHeartMat = new THREE.PointsMaterial({
+        size: 0.34,
+        map: heartParticleTex,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.96,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const bigHeartPoints = new THREE.Points(bigHeartGeo, bigHeartMat);
+      bigHeartPoints.position.set(0, 5.2, 0);
+      universeGroup.add(bigHeartPoints);
+
+      // ==========================================================
+      // 7. FLOATING MINI 3D HEARTS (INSPIRED BY THE VIDEO CODE)
+      // ==========================================================
+      const miniHeartShape = new THREE.Shape();
+      miniHeartShape.moveTo(0, 0.25);
+      miniHeartShape.bezierCurveTo(0, 0.25, -0.25, 0.6, -0.5, 0.35);
+      miniHeartShape.bezierCurveTo(-0.75, 0.1, -0.45, -0.25, 0, -0.55);
+      miniHeartShape.bezierCurveTo(0.45, -0.25, 0.75, 0.1, 0.5, 0.35);
+      miniHeartShape.bezierCurveTo(0.25, 0.6, 0, 0.25, 0, 0.25);
+
+      const heartGeo = new THREE.ExtrudeGeometry(miniHeartShape, {
+        depth: 0.14,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.05,
+        bevelThickness: 0.05
+      });
+      heartGeo.center();
+
+      const heartGroup = [];
+      for (let i = 0; i < 42; i++) {
+        const heartMat = new THREE.MeshBasicMaterial({
+          color: i % 3 === 0 ? 0xff2a75 : (i % 3 === 1 ? 0xff66b2 : 0xff94cc),
+          transparent: true,
+          opacity: 0.82
+        });
+        const heartMesh = new THREE.Mesh(heartGeo, heartMat);
+        const sc = 0.22 + Math.random() * 0.32;
+        heartMesh.scale.set(sc, sc, sc);
+        heartMesh.userData = {
+          radius: 4 + Math.random() * 14,
+          angle: Math.random() * Math.PI * 2,
+          ySpeed: 0.006 + Math.random() * 0.012,
+          yOffset: (Math.random() - 0.5) * 6,
+          orbitSpeed: 0.0012 + Math.random() * 0.0022,
+          phase: Math.random() * Math.PI * 2
+        };
+        heartMesh.position.x = Math.cos(heartMesh.userData.angle) * heartMesh.userData.radius;
+        heartMesh.position.z = Math.sin(heartMesh.userData.angle) * heartMesh.userData.radius;
+        heartMesh.position.y = heartMesh.userData.yOffset;
+        universeGroup.add(heartMesh);
+        heartGroup.push(heartMesh);
+      }
+
+      // ==========================================================
+      // 8. ORBITING 3D ROMANTIC PHRASES
+      // ==========================================================
+      function createTextSprite(text) {
+        const c = document.createElement('canvas');
+        c.width = 512;
+        c.height = 112;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+
+        ctx.font = '600 34px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#ff2a8a';
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = '#ffe8f4';
+        ctx.fillText(text, c.width / 2, c.height / 2);
+        // Second crisp pass
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(text, c.width / 2, c.height / 2);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          transparent: true,
+          opacity: 0.94,
+          depthWrite: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(4.8, 1.05, 1);
+        return sprite;
+      }
+
+      const phraseSprites = [];
+      PHRASES.forEach((phrase, idx) => {
+        const sprite = createTextSprite(phrase);
+        const ring = idx % 3;
+        const radius = ring === 0 ? 7.4 : (ring === 1 ? 12.6 : 16.8);
+        const angle = (idx / PHRASES.length) * Math.PI * 2 + ring * 0.5;
+        const yOffset = (ring - 1) * 0.55 + (Math.random() - 0.5) * 0.7;
+
+        sprite.userData = {
+          radius,
+          angle,
+          yOffset,
+          speed: 0.0014 + (2 - ring) * 0.00055
+        };
+        sprite.position.set(
+          Math.cos(angle) * radius,
+          yOffset,
+          Math.sin(angle) * radius
+        );
+        universeGroup.add(sprite);
+        phraseSprites.push(sprite);
+      });
+
+      // ==========================================================
+      // 9. ORBITING CLICKABLE MEMORY CARDS (RAYCASTABLE SPRITES)
+      // ==========================================================
+      function createMemoryCardSprite(memory) {
+        const c = document.createElement('canvas');
+        c.width = 256;
+        c.height = 256;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, 256, 256);
+
+        // Soft glowing circular aura
+        const aura = ctx.createRadialGradient(128, 128, 22, 128, 128, 118);
+        aura.addColorStop(0, 'rgba(255, 110, 185, 0.55)');
+        aura.addColorStop(0.55, 'rgba(255, 45, 138, 0.22)');
+        aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = aura;
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Circular dark badge with glowing pink border
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(128, 128, 72, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(20, 8, 28, 0.92)';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = memory.iconColor;
+        ctx.shadowColor = memory.iconColor;
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw cute distinctive miniature icon inside each badge
+        ctx.save();
+        ctx.translate(128, 124);
+        if (memory.id === 'amor') {
+          // Heart + bow silhouette
+          ctx.fillStyle = '#ff2a6d';
+          ctx.beginPath();
+          ctx.moveTo(0, 30);
+          ctx.bezierCurveTo(-42, 4, -40, -32, -16, -32);
+          ctx.bezierCurveTo(-4, -32, 0, -22, 0, -16);
+          ctx.bezierCurveTo(0, -22, 4, -32, 16, -32);
+          ctx.bezierCurveTo(40, -32, 42, 4, 0, 30);
+          ctx.fill();
+          // Sparkle
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-14, -14, 5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (memory.id === 'parati') {
+          // Cute white puppy head
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(0, 6, 30, 24, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Ears
+          ctx.fillStyle = '#24142c';
+          ctx.beginPath();
+          ctx.ellipse(-28, 4, 9, 16, 0.3, 0, Math.PI * 2);
+          ctx.ellipse(28, 4, 9, 16, -0.3, 0, Math.PI * 2);
+          ctx.fill();
+          // Eyes & Nose
+          ctx.fillStyle = '#180d1e';
+          ctx.beginPath();
+          ctx.arc(-10, 4, 3.5, 0, Math.PI * 2);
+          ctx.arc(10, 4, 3.5, 0, Math.PI * 2);
+          ctx.arc(0, 11, 3.8, 0, Math.PI * 2);
+          ctx.fill();
+          // Floating tiny pink heart above
+          ctx.fillStyle = '#ff4fa3';
+          ctx.beginPath();
+          ctx.arc(-5, -26, 6, 0, Math.PI * 2);
+          ctx.arc(5, -26, 6, 0, Math.PI * 2);
+          ctx.moveTo(-11, -24);
+          ctx.lineTo(0, -13);
+          ctx.lineTo(11, -24);
+          ctx.fill();
+        } else if (memory.id === 'parasiempre') {
+          // Golden radiant heart
+          const g = ctx.createRadialGradient(0, 0, 4, 0, 0, 38);
+          g.addColorStop(0, '#fff7cc');
+          g.addColorStop(0.55, '#ffb84d');
+          g.addColorStop(1, '#e65c8a');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(0, 32);
+          ctx.bezierCurveTo(-44, 6, -42, -32, -16, -32);
+          ctx.bezierCurveTo(-4, -32, 0, -22, 0, -16);
+          ctx.bezierCurveTo(0, -22, 4, -32, 16, -32);
+          ctx.bezierCurveTo(42, -32, 44, 6, 0, 32);
+          ctx.fill();
+        } else {
+          // Birthday star + heart
+          ctx.fillStyle = '#ff3385';
+          ctx.beginPath();
+          ctx.moveTo(0, 30);
+          ctx.bezierCurveTo(-40, 4, -38, -30, -15, -30);
+          ctx.bezierCurveTo(-4, -30, 0, -20, 0, -14);
+          ctx.bezierCurveTo(0, -20, 4, -30, 15, -30);
+          ctx.bezierCurveTo(38, -30, 40, 4, 0, 30);
+          ctx.fill();
+          ctx.fillStyle = '#fff0a8';
+          ctx.font = 'bold 26px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('✨', 0, -26);
+        }
+        ctx.restore();
+
+        // Small label underneath
+        ctx.font = '600 20px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffeaf5';
+        ctx.shadowColor = '#ff2e88';
+        ctx.shadowBlur = 10;
+        ctx.fillText(memory.title, 128, 224);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          transparent: true,
+          depthWrite: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(2.85, 2.85, 1);
+        sprite.userData = {
+          memory,
+          angle: memory.angle,
+          radius: memory.radius,
+          yOffset: memory.yOffset,
+          speed: 0.0018,
+          baseScale: 2.85
+        };
+        sprite.position.set(
+          Math.cos(memory.angle) * memory.radius,
+          memory.yOffset,
+          Math.sin(memory.angle) * memory.radius
+        );
+        return sprite;
+      }
+
+      const memorySprites = [];
+      MEMORIES.forEach((m) => {
+        const sp = createMemoryCardSprite(m);
+        universeGroup.add(sp);
+        memorySprites.push(sp);
+      });
+
+      // ==========================================================
+      // 10. SMOOTH ORBIT CAMERA & INTERACTION (MOUSE + TOUCH)
+      // ==========================================================
+      let appState = 'intro'; // 'intro' | 'warp' | 'galaxy'
+      let warpProgress = 0;
+
+      // Spherical camera target state
+      let targetTheta = 0.25;
+      let targetPhi = 1.18; // Slightly above galaxy disk
+      let targetRadius = 22.5;
+      let currentTheta = targetTheta;
+      let currentPhi = targetPhi;
+      let currentRadius = targetRadius;
+
+      let isDragging = false;
+      let pointerDownPos = { x: 0, y: 0 };
+      let lastPointerPos = { x: 0, y: 0 };
+      let didDrag = false;
+      let pinchStartDist = 0;
+      let pinchStartRadius = targetRadius;
+      let hoveredSprite = null;
+
+      const raycaster = new THREE.Raycaster();
+      const pointerNDC = new THREE.Vector2();
+
+      function updatePointerNDC(clientX, clientY) {
+        pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+        pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (appState !== 'galaxy' || modal.classList.contains('open')) return;
+        isDragging = true;
+        didDrag = false;
+        pointerDownPos.x = e.clientX;
+        pointerDownPos.y = e.clientY;
+        lastPointerPos.x = e.clientX;
+        lastPointerPos.y = e.clientY;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (appState !== 'galaxy') return;
+
+        if (isDragging) {
+          const dx = e.clientX - lastPointerPos.x;
+          const dy = e.clientY - lastPointerPos.y;
+          if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) {
+            didDrag = true;
+          }
+          targetTheta -= dx * 0.0058;
+          targetPhi = Math.max(0.35, Math.min(Math.PI * 0.48, targetPhi - dy * 0.0045));
+          lastPointerPos.x = e.clientX;
+          lastPointerPos.y = e.clientY;
+          return;
+        }
+
+        if (!modal.classList.contains('open')) {
+          updatePointerNDC(e.clientX, e.clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+          const hits = raycaster.intersectObjects(memorySprites);
+          if (hits.length > 0) {
+            hoveredSprite = hits[0].object;
+            canvas.style.cursor = 'pointer';
+          } else {
+            hoveredSprite = null;
+            canvas.style.cursor = 'grab';
+          }
+        }
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        if (appState === 'galaxy' && !didDrag && !modal.classList.contains('open')) {
+          updatePointerNDC(e.clientX, e.clientY);
+          raycaster.setFromCamera(pointerNDC, camera);
+          const hits = raycaster.intersectObjects(memorySprites);
+          if (hits.length > 0) {
+            openMemoryModal(hits[0].object.userData.memory);
+          }
+        }
+      });
+
+      canvas.addEventListener('wheel', (e) => {
+        if (appState !== 'galaxy' || modal.classList.contains('open')) return;
+        e.preventDefault();
+        targetRadius = Math.max(10, Math.min(36, targetRadius + e.deltaY * 0.018));
+      }, { passive: false });
+
+      // Two-finger pinch zoom
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2 && appState === 'galaxy') {
+          isDragging = false;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          pinchStartDist = Math.hypot(dx, dy);
+          pinchStartRadius = targetRadius;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && appState === 'galaxy' && pinchStartDist > 0) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const scale = pinchStartDist / Math.max(dist, 1);
+          targetRadius = Math.max(10, Math.min(36, pinchStartRadius * scale));
+        }
+      }, { passive: true });
+
+      // ==========================================================
+      // 11. MODAL & INTRO TRANSITION CONTROLS
+      // ==========================================================
+      const introScreen = document.getElementById('intro-screen');
+      const enterBtn = document.getElementById('enter-btn');
+      const galaxyHint = document.getElementById('galaxy-hint');
+      const modal = document.getElementById('memory-modal');
+      const modalArt = document.getElementById('modal-art');
+      const modalTitle = document.getElementById('modal-title');
+      const modalMessage = document.getElementById('modal-message');
+      const modalCloseBtn = document.getElementById('modal-close-btn');
+
+      function openMemoryModal(memory) {
+        modalArt.innerHTML = memory.svg;
+        modalTitle.textContent = memory.title;
+        modalMessage.textContent = memory.message;
+        modal.classList.add('open');
+        galaxyHint.classList.remove('visible');
+      }
+
+      function closeMemoryModal() {
+        modal.classList.remove('open');
+      }
+
+      modalCloseBtn.addEventListener('click', closeMemoryModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeMemoryModal();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+          closeMemoryModal();
+        }
+      });
+
+      enterBtn.addEventListener('click', () => {
+        if (appState !== 'intro') return;
+        appState = 'warp';
+        warpProgress = 0;
+        introScreen.classList.add('fade-out');
+        startRomanticMusic();
+
+        setTimeout(() => {
+          introScreen.style.display = 'none';
+        }, 950);
+      });
+
+      // ==========================================================
+      // 12. ANIMATION LOOP
+      // ==========================================================
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        const elapsed = clock.getElapsedTime();
+
+        // Subtle background star drift
+        bgStars.rotation.y += dt * 0.015;
+
+        if (appState === 'intro') {
+          camera.position.set(0, 0, 26);
+          camera.lookAt(0, 0, 0);
+        } else if (appState === 'warp') {
+          warpProgress += dt * 0.48; // ~2.1 seconds total warp
+
+          // Rush warp stars past camera
+          const posAttr = warpGeo.attributes.position;
+          for (let i = 0; i < warpCount; i++) {
+            let z = posAttr.getZ(i) + dt * 115;
+            if (z > 40) z = -100;
+            posAttr.setZ(i, z);
+          }
+          posAttr.needsUpdate = true;
+
+          // Fade warp in then out
+          if (warpProgress < 0.65) {
+            warpMat.opacity = Math.min(0.95, warpProgress * 2.4);
+          } else {
+            warpMat.opacity = Math.max(0, (1 - warpProgress) / 0.35);
+          }
+
+          // Bloom galaxy into view near end of warp
+          if (warpProgress > 0.42) {
+            universeGroup.visible = true;
+            const bloom = Math.min(1, (warpProgress - 0.42) / 0.58);
+            const eased = 1 - Math.pow(1 - bloom, 3);
+            universeGroup.scale.set(eased, eased, eased);
+          }
+
+          camera.position.set(0, 8 * Math.min(1, warpProgress), 26 - 4 * Math.min(1, warpProgress));
+          camera.lookAt(0, 1.8, 0);
+
+          if (warpProgress >= 1) {
+            appState = 'galaxy';
+            warpMat.opacity = 0;
+            warpTunnel.visible = false;
+            universeGroup.scale.set(1, 1, 1);
+            audioToggleBtn.classList.add('visible');
+            galaxyHint.classList.add('visible');
+            setTimeout(() => galaxyHint.classList.remove('visible'), 6500);
+          }
+        } else if (appState === 'galaxy') {
+          // Gentle auto-orbit when user isn't dragging or reading a modal
+          if (!isDragging && !modal.classList.contains('open')) {
+            targetTheta += dt * 0.095;
+          }
+
+          currentTheta += (targetTheta - currentTheta) * Math.min(1, dt * 6);
+          currentPhi += (targetPhi - currentPhi) * Math.min(1, dt * 6);
+          currentRadius += (targetRadius - currentRadius) * Math.min(1, dt * 6);
+
+          camera.position.x = currentRadius * Math.sin(currentPhi) * Math.sin(currentTheta);
+          camera.position.y = currentRadius * Math.cos(currentPhi) + 2.0;
+          camera.position.z = currentRadius * Math.sin(currentPhi) * Math.cos(currentTheta);
+          camera.lookAt(0, 1.9, 0);
+        }
+
+        if (universeGroup.visible) {
+          // Rotate spiral galaxy
+          galaxyPoints.rotation.y += dt * 0.14;
+          photonRing.rotation.z -= dt * 0.5;
+
+          // Pulse & slowly rotate the giant 3D particle heart
+          const beat = 1 + Math.sin(elapsed * 2.6) * 0.045 + Math.sin(elapsed * 5.2) * 0.018;
+          bigHeartPoints.scale.set(beat, beat, beat);
+          bigHeartPoints.rotation.y = Math.sin(elapsed * 0.65) * 0.35;
+          bigHeartPoints.position.y = 5.2 + Math.sin(elapsed * 1.4) * 0.25;
+
+          // Animate floating mini 3D hearts
+          for (let i = 0; i < heartGroup.length; i++) {
+            const hm = heartGroup[i];
+            hm.userData.angle += hm.userData.orbitSpeed;
+            hm.position.x = Math.cos(hm.userData.angle) * hm.userData.radius;
+            hm.position.z = Math.sin(hm.userData.angle) * hm.userData.radius;
+            hm.position.y = hm.userData.yOffset + Math.sin(elapsed * 1.5 + hm.userData.phase) * 0.65;
+            hm.rotation.y += dt * 0.9;
+          }
+
+          // Orbit romantic phrases
+          for (let i = 0; i < phraseSprites.length; i++) {
+            const sp = phraseSprites[i];
+            sp.userData.angle += sp.userData.speed;
+            sp.position.x = Math.cos(sp.userData.angle) * sp.userData.radius;
+            sp.position.z = Math.sin(sp.userData.angle) * sp.userData.radius;
+            sp.position.y = sp.userData.yOffset + Math.sin(elapsed * 1.2 + i) * 0.18;
+          }
+
+          // Orbit clickable memory cards
+          for (let i = 0; i < memorySprites.length; i++) {
+            const sp = memorySprites[i];
+            sp.userData.angle += sp.userData.speed;
+            sp.position.x = Math.cos(sp.userData.angle) * sp.userData.radius;
+            sp.position.z = Math.sin(sp.userData.angle) * sp.userData.radius;
+            sp.position.y = sp.userData.yOffset + Math.sin(elapsed * 1.8 + i * 1.5) * 0.3;
+
+            const targetSc = sp === hoveredSprite
+              ? sp.userData.baseScale * 1.18
+              : sp.userData.baseScale * (1 + Math.sin(elapsed * 2.5 + i) * 0.04);
+            sp.scale.x += (targetSc - sp.scale.x) * 0.14;
+            sp.scale.y += (targetSc - sp.scale.y) * 0.14;
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      window.onload = () => {
+        animate();
+      };
+    })();
+  </script>
+</body>
+</html>
